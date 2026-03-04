@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
+import 'enums.dart';
 import 'models.dart';
 
 class TestRunner {
@@ -30,7 +31,7 @@ class TestRunner {
 
   Future<Map<String, dynamic>> _handleTap(SuuprTestsSubject subject) async {
     // 0. Handle Coordinate Tap
-    if (subject.criteria == 'atCoordinate') {
+    if (subject.criteria == SuuprTestCriteria.byCoordinates) {
       final String arg = subject.argument!; // expected "x,y"
       final parts = arg.split(',');
       final double x = double.parse(parts[0].trim());
@@ -109,8 +110,9 @@ class TestRunner {
     SuuprTestsScrollAction action,
   ) async {
     final element = _findFirstElement(action.subject);
-    if (element == null)
+    if (element == null) {
       throw 'Scrollable element not found: ${action.subject}';
+    }
 
     ScrollableState? scrollable;
     // --- Start of Change ---
@@ -165,8 +167,8 @@ class TestRunner {
 
         Element? targetElement = _findFirstElement(
           SuuprTestsSubject(
-            elementType: 'widget',
-            criteria: 'key',
+            elementType: SuuprTestElementType.widget,
+            criteria: SuuprTestCriteria.key,
             argument: targetKey,
           ),
         );
@@ -180,7 +182,7 @@ class TestRunner {
           return {
             'success': true,
             'action': 'scroll',
-            'data': {'condition': 'untilVisible', 'targetKey': targetKey},
+            'data': {'type': 'untilVisible', 'targetKey': targetKey},
           };
         }
 
@@ -197,8 +199,8 @@ class TestRunner {
 
           targetElement = _findFirstElement(
             SuuprTestsSubject(
-              elementType: 'widget',
-              criteria: 'key',
+              elementType: SuuprTestElementType.widget,
+              criteria: SuuprTestCriteria.key,
               argument: targetKey,
             ),
           );
@@ -214,7 +216,7 @@ class TestRunner {
           return {
             'success': true,
             'action': 'scroll',
-            'data': {'condition': 'untilVisible', 'targetKey': targetKey},
+            'data': {'type': 'untilVisible', 'targetKey': targetKey},
           };
         }
         throw 'Could not find element with key $targetKey after scrolling.';
@@ -229,7 +231,7 @@ class TestRunner {
     return {
       'success': true,
       'action': 'scroll',
-      'data': {'goal': goal.name, 'pixels': position.pixels},
+      'data': {'type': goal.name, 'pixels': position.pixels},
     };
   }
 
@@ -297,67 +299,22 @@ class TestRunner {
 
   Future<Map<String, dynamic>> _handleVerify(
     SuuprTestsSubject subject,
-    String? condition,
+    SuuprTestVerifyOption? condition,
     Map<String, dynamic>? params,
   ) async {
     final element = _findFirstElement(subject);
 
-    if (condition == 'isVisible') {
-      return {
-        'success': element != null,
-        'action': 'verify',
-        'data': {'condition': 'isVisible', 'found': element != null},
-      };
-    }
+    switch (condition) {
+      case SuuprTestVerifyOption.isVisible:
+        return {
+          'success': element != null,
+          'action': 'verify',
+          'data': {'type': condition!.name, 'found': element != null},
+        };
+      case SuuprTestVerifyOption.isEmpty:
+        if (element == null) throw 'Element not found for verify: $subject';
 
-    if (condition == 'isEmpty') {
-      if (element == null) throw 'Element not found for verify: $subject';
-
-      // Ensure it's a text field or text area (by checking for EditableTextState)
-      EditableTextState? state;
-      void findEditableText(Element e) {
-        if (state != null) return;
-        if (e is StatefulElement && e.state is EditableTextState) {
-          state = e.state as EditableTextState;
-        } else {
-          e.visitChildren(findEditableText);
-        }
-      }
-
-      if (element is StatefulElement && element.state is EditableTextState) {
-        state = element.state as EditableTextState;
-      } else {
-        element.visitChildren(findEditableText);
-      }
-
-      if (state == null) {
-        throw 'Verify "isEmpty" failed: ${element.widget.runtimeType} is not a text field';
-      }
-
-      final bool isEmpty = state!.textEditingValue.text.isEmpty;
-      return {
-        'success': isEmpty,
-        'action': 'verify',
-        'data': {
-          'condition': 'isEmpty',
-          'actualValue': state!.textEditingValue.text,
-        },
-      };
-    }
-
-    if (condition == 'hasContent') {
-      if (element == null) throw 'Element not found for verify: $subject';
-
-      final expectedText = params?['text'] ?? '';
-      String actualText = '';
-
-      final widget = element.widget;
-      if (widget is Text) {
-        actualText = widget.data ?? '';
-      } else if (widget is RichText) {
-        actualText = widget.text.toPlainText();
-      } else {
-        // Try finding EditableTextState for input fields
+        // Ensure it's a text field or text area (by checking for EditableTextState)
         EditableTextState? state;
         void findEditableText(Element e) {
           if (state != null) return;
@@ -374,29 +331,72 @@ class TestRunner {
           element.visitChildren(findEditableText);
         }
 
-        if (state != null) {
-          actualText = state!.textEditingValue.text;
-        } else {
-          throw 'Verify "hasContent" failed: ${element.widget.runtimeType} does not have observable text content';
+        if (state == null) {
+          throw 'Verify "isEmpty" failed: ${element.widget.runtimeType} is not a text field';
         }
-      }
 
-      final bool matches = actualText == expectedText;
+        final bool isEmpty = state!.textEditingValue.text.isEmpty;
+        return {
+          'success': isEmpty,
+          'action': 'verify',
+          'data': {
+            'type': condition!.name,
+            'actualValue': state!.textEditingValue.text,
+          },
+        };
+      case SuuprTestVerifyOption.hasContent:
+        if (element == null) throw 'Element not found for verify: $subject';
 
-      return {
-        'success': matches,
-        'action': 'verify',
-        'data': {
-          'condition': 'hasContent',
-          'expected': expectedText,
-          'actual': actualText,
-          'widget': element.widget.runtimeType.toString(),
-          'key': element.widget.key?.toString(),
-        },
-      };
+        final expectedText = params?['text'] ?? '';
+        String actualText = '';
+
+        final widget = element.widget;
+        if (widget is Text) {
+          actualText = widget.data ?? '';
+        } else if (widget is RichText) {
+          actualText = widget.text.toPlainText();
+        } else {
+          // Try finding EditableTextState for input fields
+          EditableTextState? state;
+          void findEditableText(Element e) {
+            if (state != null) return;
+            if (e is StatefulElement && e.state is EditableTextState) {
+              state = e.state as EditableTextState;
+            } else {
+              e.visitChildren(findEditableText);
+            }
+          }
+
+          if (element is StatefulElement &&
+              element.state is EditableTextState) {
+            state = element.state as EditableTextState;
+          } else {
+            element.visitChildren(findEditableText);
+          }
+
+          if (state != null) {
+            actualText = state!.textEditingValue.text;
+          } else {
+            throw 'Verify "hasContent" failed: ${element.widget.runtimeType} does not have observable text content';
+          }
+        }
+
+        final bool matches = actualText == expectedText;
+
+        return {
+          'success': matches,
+          'action': 'verify',
+          'data': {
+            'type': condition!.name,
+            'expected': expectedText,
+            'actual': actualText,
+            'widget': element.widget.runtimeType.toString(),
+            'key': element.widget.key?.toString(),
+          },
+        };
+      default:
+        throw 'Unknown verify condition: $condition';
     }
-
-    throw 'Unknown verify condition: $condition';
   }
 
   Future<Map<String, dynamic>> _handleFind(SuuprTestsSubject subject) async {
@@ -433,51 +433,68 @@ class TestRunner {
   }
 
   bool _matches(Element element, SuuprTestsSubject subject) {
-    final String elementType = subject.elementType;
-    final String criteria = subject.criteria;
+    final SuuprTestElementType elementType = subject.elementType;
+    final SuuprTestCriteria criteria = subject.criteria;
     final String? argument = subject.argument;
 
     final widget = element.widget;
 
     // 1. Filter by Type
     bool typeMatches = false;
-    if (elementType == 'widget') {
+    if (elementType == SuuprTestElementType.widget) {
       typeMatches = true;
-    } else if (elementType == 'text') {
+    } else if (elementType == SuuprTestElementType.text) {
       typeMatches = widget is Text || widget is RichText;
-    } else if (elementType == 'button') {
+    } else if (elementType == SuuprTestElementType.button) {
       typeMatches =
           widget is ButtonStyleButton ||
           widget is FloatingActionButton ||
           widget is IconButton ||
           widget is InkWell ||
           widget is GestureDetector;
-    } else if (elementType == 'textField' || elementType == 'textArea') {
+    } else if (elementType == SuuprTestElementType.textField ||
+        elementType == SuuprTestElementType.textArea) {
       typeMatches = widget is TextField || widget is TextFormField;
-    } else if (elementType == 'listView') {
+    } else if (elementType == SuuprTestElementType.listView) {
       typeMatches =
           widget is ListView ||
           widget is SingleChildScrollView ||
           widget is CustomScrollView;
-    } else if (elementType == 'gridView') {
+    } else if (elementType == SuuprTestElementType.gridView) {
       typeMatches = widget is GridView;
-    } else if (elementType == 'table') {
+    } else if (elementType == SuuprTestElementType.table) {
       typeMatches = widget is Table || widget is DataTable;
     }
 
     if (!typeMatches) return false;
 
     // 2. Filter by Criteria
-    if (criteria == 'noCriteria') return true;
 
-    if (criteria == 'key') {
-      if (widget.key is ValueKey) {
-        return (widget.key as ValueKey).value.toString() == argument;
+    final isKeyFinderCriteria = const [
+      SuuprTestCriteria.top,
+      SuuprTestCriteria.bottom,
+      SuuprTestCriteria.left,
+      SuuprTestCriteria.right,
+      SuuprTestCriteria.byDistance,
+      SuuprTestCriteria.untilVisible,
+    ].contains(criteria);
+
+    if (criteria == SuuprTestCriteria.key || isKeyFinderCriteria) {
+      if (argument != null && argument.isNotEmpty) {
+        if (widget.key is ValueKey) {
+          return (widget.key as ValueKey).value.toString() == argument;
+        }
+        if (widget.key.toString() == argument) {
+          return true;
+        }
+        return false;
+      } else if (isKeyFinderCriteria) {
+        return true; // Match the first element of that type if no specific key provided
       }
-      // Handle string keys
     }
 
-    if (criteria == 'value' || criteria == 'text' || criteria == 'content') {
+    if (criteria == SuuprTestCriteria.value ||
+        criteria == SuuprTestCriteria.content) {
       if (widget is Text) {
         return widget.data == argument;
       }

@@ -2,30 +2,36 @@
 
 import 'package:flutter/foundation.dart';
 
+import 'enums.dart';
+
 @immutable
 abstract class SuuprTestsAction {
   const SuuprTestsAction();
 
   factory SuuprTestsAction.fromJson(Map<String, dynamic> json) {
-    final action = json['action'] as String;
+    final actionName = json['action'] as String;
+    final action = SuuprTestAction.values.firstWhere(
+      (e) => e.name == actionName,
+      orElse: () => throw ArgumentError('Unknown test action: $actionName'),
+    );
     final subject = json['subject'] as Map<String, dynamic>?;
     final params = json['params'] as Map<String, dynamic>?;
 
     switch (action) {
-      case 'tap':
+      case SuuprTestAction.tap:
         return SuuprTestsTapAction.fromJson(subject!);
-      case 'scroll':
+      case SuuprTestAction.scroll:
         return SuuprTestsScrollAction.fromJson(subject!, params);
-      case 'enterText':
+      case SuuprTestAction.enterText:
         return SuuprTestsEnterTextAction.fromJson(subject!, params);
-      case 'clearText':
+      case SuuprTestAction.clearText:
         return SuuprTestsClearTextAction.fromJson(subject!);
-      case 'verify':
+      case SuuprTestAction.verify:
         return SuuprTestsVerifyAction.fromJson(subject!, params);
-      case 'find':
+      case SuuprTestAction.find:
         return SuuprTestsFindAction.fromJson(subject!);
       default:
-        throw ArgumentError('Unknown test action: $action');
+        throw ArgumentError('Unhandled test action: $action');
     }
   }
 
@@ -41,18 +47,22 @@ class SuuprTestsSubject {
 
   factory SuuprTestsSubject.fromJson(Map<String, dynamic> json) {
     return SuuprTestsSubject(
-      elementType: json['elementType'] as String,
-      criteria: json['criteria'] as String,
+      elementType: SuuprTestElementType.values.firstWhere(
+        (e) => e.name == json['elementType'],
+      ),
+      criteria: SuuprTestCriteria.values.firstWhere(
+        (e) => e.name == json['criteria'],
+      ),
       argument: json['argument'] as String?,
     );
   }
-  final String elementType;
-  final String criteria;
+  final SuuprTestElementType elementType;
+  final SuuprTestCriteria criteria;
   final String? argument;
 
   Map<String, dynamic> toJson() => {
-    'elementType': elementType,
-    'criteria': criteria,
+    'elementType': elementType.name,
+    'criteria': criteria.name,
     'argument': argument,
   };
 }
@@ -90,7 +100,15 @@ class SuuprTestsScrollAction extends SuuprTestsAction {
           ? SuuprTestScrollGoal.values.firstWhere(
               (e) => e.name == params!['scrollGoal'],
             )
-          : null,
+          : (() {
+              try {
+                return SuuprTestScrollGoal.values.firstWhere(
+                  (e) => e.name == subject['criteria'],
+                );
+              } catch (_) {
+                return null;
+              }
+            })(),
       distance: params?['distance'] as double?,
       targetKey: params?['targetKey'] as String?,
     );
@@ -111,8 +129,6 @@ class SuuprTestsScrollAction extends SuuprTestsAction {
     },
   };
 }
-
-enum SuuprTestScrollGoal { top, bottom, left, right, byDistance, untilVisible }
 
 class SuuprTestsEnterTextAction extends SuuprTestsAction {
   const SuuprTestsEnterTextAction({required this.subject, this.text});
@@ -167,19 +183,23 @@ class SuuprTestsVerifyAction extends SuuprTestsAction {
   ) {
     return SuuprTestsVerifyAction(
       subject: SuuprTestsSubject.fromJson(subject),
-      condition: params?['condition'] as String? ?? 'isVisible',
+      condition: params?['condition'] != null
+          ? SuuprTestVerifyOption.values.firstWhere(
+              (e) => e.name == params!['condition'],
+            )
+          : SuuprTestVerifyOption.isVisible,
       params: params,
     );
   }
   final SuuprTestsSubject subject;
-  final String? condition;
+  final SuuprTestVerifyOption? condition;
   final Map<String, dynamic>? params;
 
   @override
   Map<String, dynamic> toJson() => {
     'action': 'verify',
     'subject': subject.toJson(),
-    'params': {'condition': condition, ...params!},
+    'params': {'condition': condition?.name, ...params!},
   };
 }
 
