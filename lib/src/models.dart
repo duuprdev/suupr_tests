@@ -14,22 +14,31 @@ abstract class SuuprTestsAction {
       (e) => e.name == actionName,
       orElse: () => throw ArgumentError('Unknown test action: $actionName'),
     );
-    final subject = json['subject'] as Map<String, dynamic>?;
-    final params = json['params'] as Map<String, dynamic>?;
+    final Map<String, dynamic> subject = Map<String, dynamic>.from(
+      json['subject'] as Map? ?? {},
+    );
+    final Map<String, dynamic>? params =
+        json['params'] as Map<String, dynamic>?;
+
+    // Robustness: if argument is missing in subject, look for it in params
+    if (subject['argument'] == null && params != null) {
+      subject['argument'] =
+          params['value'] ?? params['text'] ?? params['argument'];
+    }
 
     switch (action) {
       case SuuprTestAction.tap:
-        return SuuprTestsTapAction.fromJson(subject!);
+        return SuuprTestsTapAction.fromJson(subject);
       case SuuprTestAction.scroll:
-        return SuuprTestsScrollAction.fromJson(subject!, params);
+        return SuuprTestsScrollAction.fromJson(subject, params);
       case SuuprTestAction.enterText:
-        return SuuprTestsEnterTextAction.fromJson(subject!, params);
+        return SuuprTestsEnterTextAction.fromJson(subject, params);
       case SuuprTestAction.clearText:
-        return SuuprTestsClearTextAction.fromJson(subject!);
+        return SuuprTestsClearTextAction.fromJson(subject);
       case SuuprTestAction.verify:
-        return SuuprTestsVerifyAction.fromJson(subject!, params);
+        return SuuprTestsVerifyAction.fromJson(subject, params);
       case SuuprTestAction.find:
-        return SuuprTestsFindAction.fromJson(subject!);
+        return SuuprTestsFindAction.fromJson(subject);
       default:
         throw ArgumentError('Unhandled test action: $action');
     }
@@ -53,7 +62,7 @@ class SuuprTestsSubject {
       criteria: SuuprTestCriteria.values.firstWhere(
         (e) => e.name == json['criteria'],
       ),
-      argument: json['argument'] as String?,
+      argument: (json['argument'] ?? json['value']) as String?,
     );
   }
   final SuuprTestElementType elementType;
@@ -65,6 +74,10 @@ class SuuprTestsSubject {
     'criteria': criteria.name,
     'argument': argument,
   };
+
+  @override
+  String toString() =>
+      '[$elementType where $criteria == "${argument ?? 'null'}"]';
 }
 
 class SuuprTestsTapAction extends SuuprTestsAction {

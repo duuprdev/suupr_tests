@@ -67,6 +67,19 @@ class TestRunner {
       });
     }
 
+    // If still not found, check descendants (e.g. if we matched a Tooltip parent)
+    if (tappableElement == null) {
+      void visitor(Element e) {
+        if (tappableElement != null) return;
+        findTappable(e);
+        if (tappableElement == null) {
+          e.visitChildren(visitor);
+        }
+      }
+
+      element.visitChildren(visitor);
+    }
+
     if (tappableElement != null) {
       final widget = tappableElement!.widget;
       if (widget is FloatingActionButton) {
@@ -428,7 +441,57 @@ class TestRunner {
       }
     }
 
-    WidgetsBinding.instance.rootElement?.visitChildren(visitor);
+    // Start from the root and all its children
+    final root = WidgetsBinding.instance.rootElement;
+    if (root != null) {
+      visitor(root);
+    }
+    return found;
+  }
+
+  bool _matchesText(String? actual, String? expected) {
+    if (actual == null || expected == null) return false;
+    final a = actual.trim().toLowerCase();
+    final e = expected.trim().toLowerCase();
+    return a == e || a.contains(e);
+  }
+
+  bool _hasTextInDescendants(Element element, String text) {
+    bool found = false;
+
+    void visitor(Element e) {
+      if (found) return;
+      final widget = e.widget;
+      if (widget is Text && _matchesText(widget.data, text)) {
+        found = true;
+      } else if (widget is RichText &&
+          _matchesText(widget.text.toPlainText(), text)) {
+        found = true;
+      } else if (widget is TextField &&
+          (_matchesText(widget.decoration?.labelText, text) ||
+              _matchesText(widget.decoration?.hintText, text))) {
+        found = true;
+      } else if (widget is FloatingActionButton &&
+          _matchesText(widget.tooltip, text)) {
+        found = true;
+      } else if (widget is IconButton && _matchesText(widget.tooltip, text)) {
+        found = true;
+      } else if (widget is Tooltip && _matchesText(widget.message, text)) {
+        found = true;
+      } else if (widget is Icon && _matchesText(widget.semanticLabel, text)) {
+        found = true;
+      } else if (widget is Image && _matchesText(widget.semanticLabel, text)) {
+        found = true;
+      } else if (widget is Semantics &&
+          (_matchesText(widget.properties.label, text) ||
+              _matchesText(widget.properties.value, text))) {
+        found = true;
+      } else {
+        e.visitChildren(visitor);
+      }
+    }
+
+    element.visitChildren(visitor);
     return found;
   }
 
@@ -451,7 +514,11 @@ class TestRunner {
           widget is FloatingActionButton ||
           widget is IconButton ||
           widget is InkWell ||
-          widget is GestureDetector;
+          widget is GestureDetector ||
+          widget is MaterialButton ||
+          widget is InkResponse ||
+          widget is ListTile ||
+          widget.runtimeType.toString().contains('Button');
     } else if (elementType == SuuprTestElementType.textField ||
         elementType == SuuprTestElementType.textArea) {
       typeMatches = widget is TextField || widget is TextFormField;
@@ -494,21 +561,58 @@ class TestRunner {
     }
 
     if (criteria == SuuprTestCriteria.value ||
-        criteria == SuuprTestCriteria.content) {
-      if (widget is Text) {
-        return widget.data == argument;
+        criteria == SuuprTestCriteria.content ||
+        criteria == SuuprTestCriteria.withLabel) {
+      // 1. Check the widget itself
+      if (widget is Text && _matchesText(widget.data, argument)) {
+        return true;
       }
       if (widget is RichText) {
-        return widget.text.toPlainText() == argument;
+        if (_matchesText(widget.text.toPlainText(), argument)) return true;
       }
       if (widget is TextField) {
-        return widget.controller?.text == argument;
+        if (_matchesText(widget.controller?.text, argument)) return true;
+        if (_matchesText(widget.decoration?.labelText, argument)) return true;
+        if (_matchesText(widget.decoration?.hintText, argument)) return true;
+      }
+      if (widget is TextFormField) {
+        if (_matchesText(widget.controller?.text, argument)) return true;
+      }
+      if (widget is FloatingActionButton &&
+          _matchesText(widget.tooltip, argument)) {
+        return true;
+      }
+      if (widget is IconButton && _matchesText(widget.tooltip, argument)) {
+        return true;
+      }
+      if (widget is Tooltip && _matchesText(widget.message, argument)) {
+        return true;
+      }
+      if (widget is Icon && _matchesText(widget.semanticLabel, argument)) {
+        return true;
+      }
+      if (widget is Image && _matchesText(widget.semanticLabel, argument)) {
+        return true;
+      }
+      if (widget is Semantics &&
+          (_matchesText(widget.properties.label, argument) ||
+              _matchesText(widget.properties.value, argument))) {
+        return true;
       }
       if (element is StatefulElement && element.state is EditableTextState) {
-        return (element.state as EditableTextState).textEditingValue.text ==
-            argument;
+        if (_matchesText(
+          (element.state as EditableTextState).textEditingValue.text,
+          argument,
+        )) {
+          return true;
+        }
       }
-      // TODO: check child text for buttons
+
+      // 2. Deep check for containers (Buttons/Widgets)
+      if (elementType == SuuprTestElementType.button ||
+          elementType == SuuprTestElementType.widget) {
+        return _hasTextInDescendants(element, argument!);
+      }
     }
 
     return false;
