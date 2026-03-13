@@ -538,12 +538,6 @@ class TestRunner {
       typeMatches = widget is Table || widget is DataTable;
     }
 
-    if (typeMatches && criteria == SuuprTestCriteria.key && argument != null) {
-      debugPrint(
-        'Checking $elementType widget: ${widget.runtimeType} with key: ${widget.key} against argument: $argument',
-      );
-    }
-
     if (!typeMatches) return false;
 
     // 2. Filter by Criteria
