@@ -11,6 +11,11 @@ class TestRunner {
 
   Future<Map<String, dynamic>> execute(SuuprTestsAction action) async {
     debugPrint('SuuprTest Execution: ${action.runtimeType}');
+    if (action is SuuprTestsFindAction) {
+      debugPrint('SuuprTest Find subject: ${action.subject}');
+    } else if (action is SuuprTestsEnterTextAction) {
+      debugPrint('SuuprTest EnterText subject: ${action.subject}');
+    }
 
     if (action is SuuprTestsTapAction) {
       return _handleTap(action.subject);
@@ -533,6 +538,12 @@ class TestRunner {
       typeMatches = widget is Table || widget is DataTable;
     }
 
+    if (typeMatches && criteria == SuuprTestCriteria.key && argument != null) {
+      debugPrint(
+        'Checking $elementType widget: ${widget.runtimeType} with key: ${widget.key} against argument: $argument',
+      );
+    }
+
     if (!typeMatches) return false;
 
     // 2. Filter by Criteria
@@ -549,19 +560,20 @@ class TestRunner {
     if (criteria == SuuprTestCriteria.key || isKeyFinderCriteria) {
       if (argument != null && argument.isNotEmpty) {
         // 1. Try to match by Key
-        bool keyMatches = false;
-        if (widget.key is ValueKey) {
-          keyMatches = (widget.key as ValueKey).value.toString() == argument;
-        } else {
-          keyMatches = widget.key.toString() == argument;
-        }
+        final bool keyMatches = _matchesKey(widget.key, argument);
 
-        if (keyMatches) return true;
+        if (keyMatches) {
+          debugPrint('  ✅ Key Match Found: $argument on ${widget.runtimeType}');
+          return true;
+        }
 
         // 2. Fallback for legacy scroll actions:
         // If the argument is a number (likely a legacy distance),
         // and we are looking for a scrollable, match the first one.
         if (isKeyFinderCriteria && double.tryParse(argument) != null) {
+          debugPrint(
+            '  ⚠️ Legacy Scroll Fallback: Matching first $elementType due to numeric argument: $argument',
+          );
           return true;
         }
 
@@ -624,6 +636,35 @@ class TestRunner {
           elementType == SuuprTestElementType.widget) {
         return _hasTextInDescendants(element, argument!);
       }
+    }
+
+    return false;
+  }
+
+  bool _matchesKey(Key? key, String argument) {
+    if (key == null) return false;
+
+    // 1. Precise match if it's a ValueKey
+    if (key is ValueKey) {
+      if (key.value.toString() == argument) return true;
+    }
+
+    // 2. String-based matching
+    final String keyString = key.toString();
+
+    // Standard match
+    if (keyString == argument) return true;
+
+    // Handle Flutter's default Key.toString() format: "[<'key_name'>]" or "[<key_name>]"
+    // We strip "[<" and ">]" to try matching the raw name
+    if (keyString.startsWith('[<') && keyString.endsWith('>]')) {
+      String stripped = keyString.substring(2, keyString.length - 2);
+      // Further strip quotes if present: 'key' or "key"
+      if ((stripped.startsWith("'") && stripped.endsWith("'")) ||
+          (stripped.startsWith('"') && stripped.endsWith('"'))) {
+        stripped = stripped.substring(1, stripped.length - 1);
+      }
+      if (stripped == argument) return true;
     }
 
     return false;
