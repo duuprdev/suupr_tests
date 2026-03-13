@@ -122,7 +122,7 @@ class SuuprTestsScrollAction extends SuuprTestsAction {
                 return null;
               }
             })(),
-      distance: params?['distance'] as double?,
+      distance: (params?['distance'] as num?)?.toDouble(),
       targetKey: params?['targetKey'] as String?,
     );
   }

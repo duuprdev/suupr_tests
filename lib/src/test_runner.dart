@@ -548,15 +548,26 @@ class TestRunner {
 
     if (criteria == SuuprTestCriteria.key || isKeyFinderCriteria) {
       if (argument != null && argument.isNotEmpty) {
+        // 1. Try to match by Key
+        bool keyMatches = false;
         if (widget.key is ValueKey) {
-          return (widget.key as ValueKey).value.toString() == argument;
+          keyMatches = (widget.key as ValueKey).value.toString() == argument;
+        } else {
+          keyMatches = widget.key.toString() == argument;
         }
-        if (widget.key.toString() == argument) {
+
+        if (keyMatches) return true;
+
+        // 2. Fallback for legacy scroll actions:
+        // If the argument is a number (likely a legacy distance),
+        // and we are looking for a scrollable, match the first one.
+        if (isKeyFinderCriteria && double.tryParse(argument) != null) {
           return true;
         }
-        return false;
+
+        return false; // Key provided but didn't match and no fallback
       } else if (isKeyFinderCriteria) {
-        return true; // Match the first element of that type if no specific key provided
+        return true; // No key provided, match the first element of that type
       }
     }
 
