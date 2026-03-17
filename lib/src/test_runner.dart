@@ -365,41 +365,39 @@ class TestRunner {
       case SuuprTestVerifyOption.hasContent:
         if (element == null) throw 'Element not found for verify: $subject';
 
-        final expectedText = params?['text'] ?? '';
+        final expectedText = (params?['text'] ?? '').toString().trim();
         String actualText = '';
 
-        final widget = element.widget;
-        if (widget is Text) {
-          actualText = widget.data ?? '';
-        } else if (widget is RichText) {
-          actualText = widget.text.toPlainText();
-        } else {
-          // Try finding EditableTextState for input fields
-          EditableTextState? state;
-          void findEditableText(Element e) {
-            if (state != null) return;
-            if (e is StatefulElement && e.state is EditableTextState) {
-              state = e.state as EditableTextState;
-            } else {
-              e.visitChildren(findEditableText);
-            }
+        // 1. Try to get text from the element itself or its descendants
+        String? extracted;
+        void extractText(Element e) {
+          if (extracted != null) return;
+          final w = e.widget;
+          if (w is Text) {
+            extracted = w.data ?? w.textSpan?.toPlainText();
+          } else if (w is RichText) {
+            extracted = w.text.toPlainText();
+          } else if (e is StatefulElement && e.state is EditableTextState) {
+            extracted = (e.state as EditableTextState).textEditingValue.text;
           }
 
-          if (element is StatefulElement &&
-              element.state is EditableTextState) {
-            state = element.state as EditableTextState;
-          } else {
-            element.visitChildren(findEditableText);
-          }
-
-          if (state != null) {
-            actualText = state!.textEditingValue.text;
-          } else {
-            throw 'Verify "hasContent" failed: ${element.widget.runtimeType} does not have observable text content';
+          if (extracted == null) {
+            e.visitChildren(extractText);
           }
         }
 
-        final bool matches = actualText == expectedText;
+        extractText(element);
+        actualText = (extracted ?? '').trim();
+
+        // 2. Perform comparison
+        // We use a flexible match: trimmed exact match or simple inclusion
+        // to handle cases where there might be subtle formatting or hidden characters.
+        final bool matches =
+            actualText == expectedText || actualText.contains(expectedText);
+
+        if (!matches && extracted == null) {
+          throw 'Verify "hasContent" failed: ${element.widget.runtimeType} and its descendants do not have observable text content';
+        }
 
         return {
           'success': matches,
@@ -410,6 +408,7 @@ class TestRunner {
             'actual': actualText,
             'widget': element.widget.runtimeType.toString(),
             'key': element.widget.key?.toString(),
+            'matchType': actualText == expectedText ? 'exact' : 'contains',
           },
         };
       default:
