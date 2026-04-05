@@ -1,6 +1,7 @@
-## 0.0.1
--   Initial release of `suupr_tests`.
+## 1.0.0-beta.1
+-   Official Beta release of `suupr_tests`.
 -   Direct Flutter integration via VM Service Protocol.
 -   Synthetic pointer event injection and widget visitation engines.
 -   AI-ready RPC service extensions.
 -   Support for deep text verification and smart scrolling.
+-   **Note**: This is a beta release. Breaking changes may occur in future beta versions as we refine the API.
