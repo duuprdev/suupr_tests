@@ -5,11 +5,19 @@
 
 Suupr Tests is a no-code E2E testing framework that allows you to create, manage, and execute complex end-to-end tests through a companion UI, bypassing the need to write traditional Dart test code.
 
+# Download SuuprTests
 You can download the SuuprTests Dashboard companion app for macOS here:
 
 [![Download SuuprTests](https://img.shields.io/github/v/release/romanjaquez/suuprtests?label=Download%20MacOS%20Beta&logo=apple&color=007AFF)](https://duuprdev.github.io/suuprtests_releases/SuuprTests_Beta.dmg)
 
+# SuuprTests Page
+Check out more info on Suuupr Tests [here](https://suuprtests.duupr.io/).
+
+# SuuprTests Documentation
+Documentation for the Dashboard, Runtime and upcoming CLI can be found [here](https://docs.suuprtests.duupr.io/).
+
 ![Suupr Tests](st1.png)
+
 
 This package represents the runtime bridge for the **Suupr Tests** orchestration framework. It enables **no-code E2E testing** by providing a standardized JSON-RPC link between your Flutter app and the **SuuprTests UI** (available for macOS only).
 
