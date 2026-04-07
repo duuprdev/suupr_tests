@@ -69,6 +69,7 @@ The following service extensions are registered automatically:
 - **AI-Ready**: Working on making it ready for LLM tool-calling (e.g., Gemini) with optimized JSON payloads.
 - **Drag & Drop**: Native-feeling drag and drop synchronization for sophisticated E2E testing scenarios.
 - **Auto-Scrolling**: Improved iterative search for elements within lazy-loading scrollables (`untilVisible`).
+- **Windows Support**: Added support for Windows (both CLI and Dashboard).
 
 ## Caveats
 - Since it relies on the Flutter widget tree visitor, it cannot interact with native platform views (like `GoogleMaps` or `WebView`) that are not rendered as standard Flutter widgets.
