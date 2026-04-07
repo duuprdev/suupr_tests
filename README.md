@@ -5,7 +5,9 @@
 
 Suupr Tests is a no-code E2E testing framework that allows you to create, manage, and execute complex end-to-end tests through a companion UI, bypassing the need to write traditional Dart test code.
 
+You can download the SuuprTests Dashboard companion app for macOS here:
 
+[![Download SuuprTests](https://img.shields.io/github/v/release/romanjaquez/suuprtests?label=Download%20MacOS%20Beta&logo=apple&color=007AFF)](https://duuprdev.github.io/suuprtests_releases/SuuprTests_Beta.dmg)
 
 ![Suupr Tests](st1.png)
 
