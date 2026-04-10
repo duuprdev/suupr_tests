@@ -1,0 +1,21 @@
+name: suupr_tests_example
+description: Demonstrates how to use suupr_tests.
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.10.4 <4.0.0'
+  flutter: ">=1.17.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  suupr_tests:
+    path: ../
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true

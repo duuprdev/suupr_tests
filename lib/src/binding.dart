@@ -63,8 +63,15 @@ mixin SuuprTestsExtension on WidgetsBinding {
   }
 }
 
-/// A custom binding that registers service extensions for remote control via MCP.
+/// A custom [WidgetsBinding] that registers Suupr Tests service extensions.
+///
+/// This binding allows the application to be remotely controlled via the
+/// Dart VM Service Protocol, enabling no-code E2E testing.
 class SuuprTestsBinding extends WidgetsFlutterBinding with SuuprTestsExtension {
+  /// Ensures that the [SuuprTestsBinding] is initialized.
+  ///
+  /// If a binding is already present, it returns it; otherwise, it creates
+  /// a new instance of [SuuprTestsBinding].
   static WidgetsBinding ensureInitialized() {
     try {
       return WidgetsBinding.instance;
