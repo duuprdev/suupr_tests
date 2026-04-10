@@ -1,3 +1,7 @@
+## 1.0.0-beta.3
+- Correct repository and issue tracker URLs.
+- Update README image with absolute link for better display.
+
 ## 1.0.0-beta.2
 - Update package description to more accurately reflect current features.
 - Minor metadata cleanup.

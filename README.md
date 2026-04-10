@@ -16,7 +16,7 @@ Check out more info on Suuupr Tests [here](https://suuprtests.duupr.io/).
 # SuuprTests Documentation
 Documentation for the Dashboard, Runtime and upcoming CLI can be found [here](https://docs.suuprtests.duupr.io/).
 
-![Suupr Tests](st1.png)
+![Suupr Tests](https://raw.githubusercontent.com/duuprdev/suupr_tests/main/st1.png)
 
 
 This package represents the runtime bridge for the **Suupr Tests** orchestration framework. It enables **no-code E2E testing** by providing a standardized JSON-RPC link between your Flutter app and the **SuuprTests UI** (available for macOS only).
