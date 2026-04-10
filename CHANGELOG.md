@@ -1,3 +1,7 @@
+## 1.0.0-beta.2
+- Update package description to more accurately reflect current features.
+- Minor metadata cleanup.
+
 ## 1.0.0-beta.1
 -   Official Beta release of `suupr_tests`.
 -   Direct Flutter integration via VM Service Protocol.

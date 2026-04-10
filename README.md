@@ -1,7 +1,7 @@
 # Suupr Tests Runtime
 
 > [!WARNING]
-> **BETA STATUS**: This package is currently in Beta. We are actively refining the API to improve performance and AI integration. **Breaking changes may occur between beta releases.** Please pin your version and check the [CHANGELOG](CHANGELOG.md) before updating.
+> **BETA STATUS**: This package is currently in Beta. We are actively refining the API to improve performance and orchestration capabilities. **Breaking changes may occur between beta releases.** Please pin your version and check the [CHANGELOG](CHANGELOG.md) before updating.
 
 Suupr Tests is a no-code E2E testing framework that allows you to create, manage, and execute complex end-to-end tests through a companion UI, bypassing the need to write traditional Dart test code.
 
