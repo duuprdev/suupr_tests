@@ -1,6 +1,6 @@
 name: suupr_tests
 description: "No-code E2E orchestration framework for automated Flutter testing using VM Service extensions."
-version: 1.0.0-beta.4
+version: 1.0.0-beta.5
 homepage: https://duupr.io
 repository: https://github.com/duuprdev/suupr_tests
 issue_tracker: https://github.com/duuprdev/suupr_tests/issues

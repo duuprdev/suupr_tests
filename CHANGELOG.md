@@ -1,3 +1,6 @@
+## 1.0.0-beta.5
+- Fix example to only initialize binding in debug mode.
+
 ## 1.0.0-beta.4
 - Add `example/` directory.
 - Improve library-level documentation for better pub.dev score.
