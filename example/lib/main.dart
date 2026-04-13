@@ -1,10 +1,13 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:suupr_tests/suupr_tests.dart';
 
 void main() {
   // 1. Initialize the SuuprTestsBinding to enable remote orchestration.
   // This registers service extensions that the SuuprTests UI can connect to.
-  SuuprTestsBinding.ensureInitialized();
+  if (kDebugMode) {
+    SuuprTestsBinding.ensureInitialized();
+  }
 
   runApp(const MyApp());
 }
@@ -54,9 +57,7 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
+            const Text('You have pushed the button this many times:'),
             Text(
               '$_counter',
               key: const Key('counter_text'),
