@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
@@ -332,73 +334,79 @@ class TestRunner {
 
     debugPrint('🚀 SuuprTest: Starting Drag from $start to $target');
 
-    // Perform smooth drag
-    const duration = Duration(milliseconds: 1000);
-    const frames = 30;
+    // Perform high-compliance gesture simulation
+    const duration = Duration(milliseconds: 2000);
+    const frames = 60;
     final sleepInterval = duration.inMilliseconds ~/ frames;
 
-    const kind = PointerDeviceKind.mouse;
+    const int pointerId = 0; 
+    final random = math.Random();
+    Offset lastPosition = start;
 
+    // Determine device kind based on platform
+    final isMobile = defaultTargetPlatform == TargetPlatform.iOS || 
+                     defaultTargetPlatform == TargetPlatform.android;
+    final kind = isMobile ? PointerDeviceKind.touch : PointerDeviceKind.mouse;
+
+    debugPrint('🚀 SuuprTest: High-Compliance Sim on $defaultTargetPlatform (Pointer: $pointerId)');
+
+    // 1. Hardware Initialization
     WidgetsBinding.instance.handlePointerEvent(
-      PointerAddedEvent(pointer: 1, position: start, kind: kind),
+      PointerAddedEvent(pointer: pointerId, position: start, kind: kind),
     );
 
-    WidgetsBinding.instance.handlePointerEvent(
-      PointerEnterEvent(pointer: 1, position: start, kind: kind),
-    );
-
-    WidgetsBinding.instance.handlePointerEvent(
-      PointerHoverEvent(pointer: 1, position: start, kind: kind),
-    );
-
-    WidgetsBinding.instance.handlePointerEvent(
-      PointerDownEvent(
-        pointer: 1,
-        position: start,
-        kind: kind,
-        buttons: 1, // Left mouse button
-      ),
-    );
-
-    // Initial move to break out of tap slop (usually 18px for touch, but smaller for mouse)
-    await Future.delayed(const Duration(milliseconds: 100));
-    const jitterOffset = Offset(15, 15);
-
-    WidgetsBinding.instance.handlePointerEvent(
-      PointerMoveEvent(
-        pointer: 1,
-        position: start + jitterOffset,
-        kind: kind,
-        buttons: 1,
-      ),
-    );
-
-    for (int i = 1; i <= frames; i++) {
-      final double t = i / frames;
-      final currentPosition = Offset.lerp(start + jitterOffset, target, t)!;
+    if (!isMobile) {
       WidgetsBinding.instance.handlePointerEvent(
-        PointerMoveEvent(
-          pointer: 1,
-          position: currentPosition,
-          kind: kind,
-          buttons: 1,
-        ),
+        PointerEnterEvent(pointer: pointerId, position: start, kind: kind),
       );
-      await Future.delayed(Duration(milliseconds: sleepInterval));
     }
 
+    // 2. Interaction Start (Pointer Down)
+    WidgetsBinding.instance.handlePointerEvent(
+      PointerDownEvent(
+        pointer: pointerId,
+        position: start,
+        kind: kind,
+        buttons: 1,
+        pressure: 1.0,
+      ),
+    );
+
+    // 3. WAIT FOR LONG PRESS (Critical for LongPressDraggable inside ListView)
+    debugPrint('⏳ SuuprTest: Waiting for LongPress trigger (650ms)...');
+    await Future.delayed(const Duration(milliseconds: 650));
+    await WidgetsBinding.instance.endOfFrame;
+
+    // 4. Teleport to Target (No more wacky glide)
+    debugPrint('🚀 SuuprTest: Teleporting to target...');
+    WidgetsBinding.instance.handlePointerEvent(
+      PointerMoveEvent(
+        pointer: pointerId,
+        position: target,
+        delta: target - lastPosition,
+        kind: kind,
+        buttons: 1,
+        pressure: 1.0,
+      ),
+    );
+    lastPosition = target;
+
+    // 5. Brief stabilization for registration
     await Future.delayed(const Duration(milliseconds: 100));
+    await WidgetsBinding.instance.endOfFrame;
 
+    // 6. Interaction End
     WidgetsBinding.instance.handlePointerEvent(
-      PointerUpEvent(pointer: 1, position: target, kind: kind),
+        PointerUpEvent(
+            pointer: pointerId, 
+            position: target, 
+            kind: kind,
+            pressure: 0.0,
+        ),
     );
 
     WidgetsBinding.instance.handlePointerEvent(
-      PointerExitEvent(pointer: 1, position: target, kind: kind),
-    );
-
-    WidgetsBinding.instance.handlePointerEvent(
-      PointerRemovedEvent(pointer: 1, position: target, kind: kind),
+        PointerRemovedEvent(pointer: pointerId, position: target, kind: kind),
     );
 
     return {
