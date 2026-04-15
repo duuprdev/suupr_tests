@@ -29,6 +29,8 @@ class TestRunner {
       return _handleVerify(action.subject, action.condition, action.params);
     } else if (action is SuuprTestsFindAction) {
       return _handleFind(action.subject);
+    } else if (action is SuuprTestsDragAction) {
+      return _handleDrag(action);
     } else {
       throw 'Unknown action type: ${action.runtimeType}';
     }
@@ -266,6 +268,146 @@ class TestRunner {
       'success': true,
       'action': 'tap',
       'data': {'type': 'coordinate', 'x': position.dx, 'y': position.dy},
+    };
+  }
+
+  Future<Map<String, dynamic>> _handleDrag(SuuprTestsDragAction action) async {
+    Offset? startOffset;
+    Offset? targetOffset;
+
+    // Resolve start offset
+    if (action.startOffsets != null) {
+      startOffset = action.startOffsets;
+    } else {
+      final element = _findFirstElement(action.subject);
+      if (element == null) throw 'Source element not found for drag';
+      final renderObject = element.renderObject;
+      if (renderObject is RenderBox) {
+        final size = renderObject.size;
+        final globalPos = renderObject.localToGlobal(Offset.zero);
+        debugPrint(
+          '📦 Source Bounds: $globalPos to ${globalPos + Offset(size.width, size.height)}',
+        );
+        startOffset = renderObject.localToGlobal(
+          renderObject.size.center(Offset.zero),
+        );
+      } else {
+        throw 'Source widget has no RenderBox';
+      }
+    }
+
+    // Resolve target offset
+    if (action.targetOffsets != null) {
+      targetOffset = action.targetOffsets;
+    } else if (action.targetKey != null) {
+      final targetElement = _findFirstElement(
+        SuuprTestsSubject(
+          elementType: SuuprTestElementType.widget,
+          criteria: SuuprTestCriteria.key,
+          argument: action.targetKey,
+        ),
+      );
+      if (targetElement == null) throw 'Target element not found for drag';
+      final renderObject = targetElement.renderObject;
+      if (renderObject is RenderBox) {
+        final size = renderObject.size;
+        final globalPos = renderObject.localToGlobal(Offset.zero);
+        debugPrint(
+          '🎯 Target Bounds: $globalPos to ${globalPos + Offset(size.width, size.height)}',
+        );
+        targetOffset = renderObject.localToGlobal(
+          renderObject.size.center(Offset.zero),
+        );
+      } else {
+        throw 'Target widget has no RenderBox';
+      }
+    }
+
+    if (startOffset == null || targetOffset == null) {
+      throw 'Invalid drag coordinates: Source=$startOffset Target=$targetOffset';
+    }
+
+    final start = startOffset;
+    final target = targetOffset;
+
+    debugPrint('🚀 SuuprTest: Starting Drag from $start to $target');
+
+    // Perform smooth drag
+    const duration = Duration(milliseconds: 1000);
+    const frames = 30;
+    final sleepInterval = duration.inMilliseconds ~/ frames;
+
+    const kind = PointerDeviceKind.mouse;
+
+    WidgetsBinding.instance.handlePointerEvent(
+      PointerAddedEvent(pointer: 1, position: start, kind: kind),
+    );
+
+    WidgetsBinding.instance.handlePointerEvent(
+      PointerEnterEvent(pointer: 1, position: start, kind: kind),
+    );
+
+    WidgetsBinding.instance.handlePointerEvent(
+      PointerHoverEvent(pointer: 1, position: start, kind: kind),
+    );
+
+    WidgetsBinding.instance.handlePointerEvent(
+      PointerDownEvent(
+        pointer: 1,
+        position: start,
+        kind: kind,
+        buttons: 1, // Left mouse button
+      ),
+    );
+
+    // Initial move to break out of tap slop (usually 18px for touch, but smaller for mouse)
+    await Future.delayed(const Duration(milliseconds: 100));
+    const jitterOffset = Offset(15, 15);
+
+    WidgetsBinding.instance.handlePointerEvent(
+      PointerMoveEvent(
+        pointer: 1,
+        position: start + jitterOffset,
+        kind: kind,
+        buttons: 1,
+      ),
+    );
+
+    for (int i = 1; i <= frames; i++) {
+      final double t = i / frames;
+      final currentPosition = Offset.lerp(start + jitterOffset, target, t)!;
+      WidgetsBinding.instance.handlePointerEvent(
+        PointerMoveEvent(
+          pointer: 1,
+          position: currentPosition,
+          kind: kind,
+          buttons: 1,
+        ),
+      );
+      await Future.delayed(Duration(milliseconds: sleepInterval));
+    }
+
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    WidgetsBinding.instance.handlePointerEvent(
+      PointerUpEvent(pointer: 1, position: target, kind: kind),
+    );
+
+    WidgetsBinding.instance.handlePointerEvent(
+      PointerExitEvent(pointer: 1, position: target, kind: kind),
+    );
+
+    WidgetsBinding.instance.handlePointerEvent(
+      PointerRemovedEvent(pointer: 1, position: target, kind: kind),
+    );
+
+    return {
+      'success': true,
+      'action': 'drag',
+      'data': {
+        'start': {'x': startOffset.dx, 'y': startOffset.dy},
+        'target': {'x': targetOffset.dx, 'y': targetOffset.dy},
+      },
     };
   }
 
@@ -548,6 +690,9 @@ class TestRunner {
       SuuprTestCriteria.right,
       SuuprTestCriteria.byDistance,
       SuuprTestCriteria.untilVisible,
+      SuuprTestCriteria.sourceToTarget,
+      SuuprTestCriteria.positionToPosition,
+      SuuprTestCriteria.widgetPositionToPosition,
     ].contains(criteria);
 
     if (criteria == SuuprTestCriteria.key || isKeyFinderCriteria) {

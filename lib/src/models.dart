@@ -1,6 +1,6 @@
 // ignore_for_file: public_member_api_docs
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 import 'enums.dart';
 
@@ -39,6 +39,8 @@ abstract class SuuprTestsAction {
         return SuuprTestsVerifyAction.fromJson(subject, params);
       case SuuprTestAction.find:
         return SuuprTestsFindAction.fromJson(subject);
+      case SuuprTestAction.dragAndDrop:
+        return SuuprTestsDragAction.fromJson(subject, params);
       default:
         throw ArgumentError('Unhandled test action: $action');
     }
@@ -228,5 +230,55 @@ class SuuprTestsFindAction extends SuuprTestsAction {
   Map<String, dynamic> toJson() => {
     'action': 'find',
     'subject': subject.toJson(),
+  };
+}
+
+class SuuprTestsDragAction extends SuuprTestsAction {
+  const SuuprTestsDragAction({
+    required this.subject,
+    this.targetKey,
+    this.targetOffsets,
+    this.startOffsets,
+  });
+
+  factory SuuprTestsDragAction.fromJson(
+    Map<String, dynamic> subject,
+    Map<String, dynamic>? params,
+  ) {
+    return SuuprTestsDragAction(
+      subject: SuuprTestsSubject.fromJson(subject),
+      targetKey: params?['targetKey'] as String?,
+      targetOffsets: params?['targetOffsets'] != null
+          ? Offset(
+              (params!['targetOffsets']['dx'] as num).toDouble(),
+              (params['targetOffsets']['dy'] as num).toDouble(),
+            )
+          : null,
+      startOffsets: params?['startOffsets'] != null
+          ? Offset(
+              (params!['startOffsets']['dx'] as num).toDouble(),
+              (params['startOffsets']['dy'] as num).toDouble(),
+            )
+          : null,
+    );
+  }
+
+  final SuuprTestsSubject subject;
+  final String? targetKey;
+  final Offset? targetOffsets;
+  final Offset? startOffsets;
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'action': 'dragAndDrop',
+    'subject': subject.toJson(),
+    if (targetKey != null || targetOffsets != null || startOffsets != null)
+      'params': {
+        if (targetKey != null) 'targetKey': targetKey,
+        if (targetOffsets != null)
+          'targetOffsets': {'dx': targetOffsets!.dx, 'dy': targetOffsets!.dy},
+        if (startOffsets != null)
+          'startOffsets': {'dx': startOffsets!.dx, 'dy': startOffsets!.dy},
+      },
   };
 }
