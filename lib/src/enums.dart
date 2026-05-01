@@ -1,6 +1,15 @@
 // ignore_for_file: public_member_api_docs
 
-enum SuuprTestAction { find, tap, scroll, enterText, clearText, wait, verify }
+enum SuuprTestAction {
+  find,
+  tap,
+  scroll,
+  enterText,
+  clearText,
+  wait,
+  verify,
+  dragAndDrop,
+}
 
 enum SuuprTestElementType {
   text,
@@ -34,6 +43,9 @@ enum SuuprTestCriteria {
   byDistance,
   byCoordinates,
   untilVisible,
+  sourceToTarget,
+  positionToPosition,
+  widgetPositionToPosition,
 }
 
 enum SuuprTestVerifyOption { isVisible, hasContent, isEmpty }
