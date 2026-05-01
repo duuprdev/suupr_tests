@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -334,21 +333,18 @@ class TestRunner {
 
     debugPrint('🚀 SuuprTest: Starting Drag from $start to $target');
 
-    // Perform high-compliance gesture simulation
-    const duration = Duration(milliseconds: 2000);
-    const frames = 60;
-    final sleepInterval = duration.inMilliseconds ~/ frames;
-
-    const int pointerId = 0; 
-    final random = math.Random();
+    const int pointerId = 0;
     Offset lastPosition = start;
 
     // Determine device kind based on platform
-    final isMobile = defaultTargetPlatform == TargetPlatform.iOS || 
-                     defaultTargetPlatform == TargetPlatform.android;
+    final isMobile =
+        defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.android;
     final kind = isMobile ? PointerDeviceKind.touch : PointerDeviceKind.mouse;
 
-    debugPrint('🚀 SuuprTest: High-Compliance Sim on $defaultTargetPlatform (Pointer: $pointerId)');
+    debugPrint(
+      '🚀 SuuprTest: High-Compliance Sim on $defaultTargetPlatform (Pointer: $pointerId)',
+    );
 
     // 1. Hardware Initialization
     WidgetsBinding.instance.handlePointerEvent(
@@ -397,16 +393,16 @@ class TestRunner {
 
     // 6. Interaction End
     WidgetsBinding.instance.handlePointerEvent(
-        PointerUpEvent(
-            pointer: pointerId, 
-            position: target, 
-            kind: kind,
-            pressure: 0.0,
-        ),
+      PointerUpEvent(
+        pointer: pointerId,
+        position: target,
+        kind: kind,
+        pressure: 0.0,
+      ),
     );
 
     WidgetsBinding.instance.handlePointerEvent(
-        PointerRemovedEvent(pointer: pointerId, position: target, kind: kind),
+      PointerRemovedEvent(pointer: pointerId, position: target, kind: kind),
     );
 
     return {

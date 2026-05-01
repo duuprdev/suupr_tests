@@ -1,3 +1,6 @@
+## 1.0.0-beta.6
+- Add support for drag and drop.
+
 ## 1.0.0-beta.5
 - Fix example to only initialize binding in debug mode.
 
