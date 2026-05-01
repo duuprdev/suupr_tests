@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
@@ -29,6 +31,8 @@ class TestRunner {
       return _handleVerify(action.subject, action.condition, action.params);
     } else if (action is SuuprTestsFindAction) {
       return _handleFind(action.subject);
+    } else if (action is SuuprTestsDragAction) {
+      return _handleDrag(action);
     } else {
       throw 'Unknown action type: ${action.runtimeType}';
     }
@@ -266,6 +270,152 @@ class TestRunner {
       'success': true,
       'action': 'tap',
       'data': {'type': 'coordinate', 'x': position.dx, 'y': position.dy},
+    };
+  }
+
+  Future<Map<String, dynamic>> _handleDrag(SuuprTestsDragAction action) async {
+    Offset? startOffset;
+    Offset? targetOffset;
+
+    // Resolve start offset
+    if (action.startOffsets != null) {
+      startOffset = action.startOffsets;
+    } else {
+      final element = _findFirstElement(action.subject);
+      if (element == null) throw 'Source element not found for drag';
+      final renderObject = element.renderObject;
+      if (renderObject is RenderBox) {
+        final size = renderObject.size;
+        final globalPos = renderObject.localToGlobal(Offset.zero);
+        debugPrint(
+          '📦 Source Bounds: $globalPos to ${globalPos + Offset(size.width, size.height)}',
+        );
+        startOffset = renderObject.localToGlobal(
+          renderObject.size.center(Offset.zero),
+        );
+      } else {
+        throw 'Source widget has no RenderBox';
+      }
+    }
+
+    // Resolve target offset
+    if (action.targetOffsets != null) {
+      targetOffset = action.targetOffsets;
+    } else if (action.targetKey != null) {
+      final targetElement = _findFirstElement(
+        SuuprTestsSubject(
+          elementType: SuuprTestElementType.widget,
+          criteria: SuuprTestCriteria.key,
+          argument: action.targetKey,
+        ),
+      );
+      if (targetElement == null) throw 'Target element not found for drag';
+      final renderObject = targetElement.renderObject;
+      if (renderObject is RenderBox) {
+        final size = renderObject.size;
+        final globalPos = renderObject.localToGlobal(Offset.zero);
+        debugPrint(
+          '🎯 Target Bounds: $globalPos to ${globalPos + Offset(size.width, size.height)}',
+        );
+        targetOffset = renderObject.localToGlobal(
+          renderObject.size.center(Offset.zero),
+        );
+      } else {
+        throw 'Target widget has no RenderBox';
+      }
+    }
+
+    if (startOffset == null || targetOffset == null) {
+      throw 'Invalid drag coordinates: Source=$startOffset Target=$targetOffset';
+    }
+
+    final start = startOffset;
+    final target = targetOffset;
+
+    debugPrint('🚀 SuuprTest: Starting Drag from $start to $target');
+
+    // Perform high-compliance gesture simulation
+    const duration = Duration(milliseconds: 2000);
+    const frames = 60;
+    final sleepInterval = duration.inMilliseconds ~/ frames;
+
+    const int pointerId = 0; 
+    final random = math.Random();
+    Offset lastPosition = start;
+
+    // Determine device kind based on platform
+    final isMobile = defaultTargetPlatform == TargetPlatform.iOS || 
+                     defaultTargetPlatform == TargetPlatform.android;
+    final kind = isMobile ? PointerDeviceKind.touch : PointerDeviceKind.mouse;
+
+    debugPrint('🚀 SuuprTest: High-Compliance Sim on $defaultTargetPlatform (Pointer: $pointerId)');
+
+    // 1. Hardware Initialization
+    WidgetsBinding.instance.handlePointerEvent(
+      PointerAddedEvent(pointer: pointerId, position: start, kind: kind),
+    );
+
+    if (!isMobile) {
+      WidgetsBinding.instance.handlePointerEvent(
+        PointerEnterEvent(pointer: pointerId, position: start, kind: kind),
+      );
+    }
+
+    // 2. Interaction Start (Pointer Down)
+    WidgetsBinding.instance.handlePointerEvent(
+      PointerDownEvent(
+        pointer: pointerId,
+        position: start,
+        kind: kind,
+        buttons: 1,
+        pressure: 1.0,
+      ),
+    );
+
+    // 3. WAIT FOR LONG PRESS (Critical for LongPressDraggable inside ListView)
+    debugPrint('⏳ SuuprTest: Waiting for LongPress trigger (650ms)...');
+    await Future.delayed(const Duration(milliseconds: 650));
+    await WidgetsBinding.instance.endOfFrame;
+
+    // 4. Teleport to Target (No more wacky glide)
+    debugPrint('🚀 SuuprTest: Teleporting to target...');
+    WidgetsBinding.instance.handlePointerEvent(
+      PointerMoveEvent(
+        pointer: pointerId,
+        position: target,
+        delta: target - lastPosition,
+        kind: kind,
+        buttons: 1,
+        pressure: 1.0,
+      ),
+    );
+    lastPosition = target;
+
+    // 5. Brief stabilization for registration
+    await Future.delayed(const Duration(milliseconds: 100));
+    await WidgetsBinding.instance.endOfFrame;
+
+    // 6. Interaction End
+    WidgetsBinding.instance.handlePointerEvent(
+        PointerUpEvent(
+            pointer: pointerId, 
+            position: target, 
+            kind: kind,
+            pressure: 0.0,
+        ),
+    );
+
+    WidgetsBinding.instance.handlePointerEvent(
+        PointerRemovedEvent(pointer: pointerId, position: target, kind: kind),
+    );
+
+    return {
+      'success': true,
+      'action': 'drag',
+      'data': {
+        'start': {'x': startOffset.dx, 'y': startOffset.dy},
+        'target': {'x': targetOffset.dx, 'y': targetOffset.dy},
+      },
     };
   }
 
@@ -548,6 +698,9 @@ class TestRunner {
       SuuprTestCriteria.right,
       SuuprTestCriteria.byDistance,
       SuuprTestCriteria.untilVisible,
+      SuuprTestCriteria.sourceToTarget,
+      SuuprTestCriteria.positionToPosition,
+      SuuprTestCriteria.widgetPositionToPosition,
     ].contains(criteria);
 
     if (criteria == SuuprTestCriteria.key || isKeyFinderCriteria) {
